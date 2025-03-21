@@ -26,8 +26,8 @@ func Test_PlacesNearby(t *testing.T) {
 	incTypes := []string{"restaurant"}
 	location := LocationRestriction{
 		Circle{Center: LatLng{Lat: 44.67775, Lng: -63.67206}, Radius: 10000}}
-	req := NearbySearchRequest{LocationRestriction: &location, MaxResultCount: 5, IncludedTypes: incTypes}
-	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes}
+	req := NearbySearchRequest{LocationRestriction: &location, MaxResultCount: 1, IncludedTypes: incTypes}
+	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
 	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
 	resp, err := testGeoClient.NearbySearch(ctx, &req, &header)
 	assert.NoError(t, err)

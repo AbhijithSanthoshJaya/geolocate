@@ -38,15 +38,17 @@ type LocalizedText struct {
 
 // Object representing a 'Place' as represented by Google Places
 type Place struct {
-	Id               string         `json:"id"`
-	DisplayName      LocalizedText  `json:"displayName"`
-	Types            []string       `json:"types"`
-	FormattedAddress string         `json:"formattedAddress"`
-	Rating           int32          `json:"rating"`
-	Location         *LatLng        `json:"location"`
-	BusinessStatus   BusinessStatus `json:"businessStatus"`
-	PhoneNumber      string         `json:"nationalPhoneNumber"`
-	Photos           []Photo        `json:"photos,omitempty"`
+	Id                  string         `json:"id"`
+	DisplayName         LocalizedText  `json:"displayName"`
+	Types               []string       `json:"types"`
+	FormattedAddress    string         `json:"formattedAddress"`
+	Rating              int32          `json:"rating"`
+	Location            *LatLng        `json:"location"`
+	BusinessStatus      BusinessStatus `json:"businessStatus"`
+	PhoneNumber         string         `json:"nationalPhoneNumber"`
+	Photos              []Photo        `json:"photos,omitempty"`
+	Timezone            Timezone       `json:"timeZone,omitempty"`
+	RegularOpeningHours OpeningHours   `json:"regularOpeningHours,omitempty"`
 }
 
 type NearbySearchRequest struct {
@@ -64,7 +66,7 @@ type NearbySearchRequest struct {
 // your search request by supplying the type of place you are searching for.
 func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
 	if r.LocationRestriction == nil {
-		return PlacesSearchResponse{}, errors.New("maps: Required fields address and/or components are all missing")
+		return PlacesSearchResponse{}, errors.New("maps: Required fields LocationRestriction missing")
 	}
 	var response struct {
 		Places []Place `json:"places"`
@@ -72,7 +74,6 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 	if err := c.JsonPost(ctx, placesNearbySearchAPI, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
-
 	return PlacesSearchResponse{response.Places}, nil
 
 }
@@ -126,4 +127,5 @@ const (
 	PlaceFieldMaskPlaceID              = PlaceFieldMask("id")
 	PlaceFieldMaskRatings              = PlaceFieldMask("rating")
 	PlaceFieldMaskTypes                = PlaceFieldMask("types")
+	PlaceFieldMaskOpeningHours         = PlaceFieldMask("regularOpeningHours")
 )
