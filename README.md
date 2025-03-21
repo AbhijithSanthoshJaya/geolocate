@@ -16,5 +16,7 @@ This would give API-KEY not authorised to error for these requests even if you e
 
 ## Future Work
 
-Built a Rest API that will help query and export these results
+Build a Rest API that will help query and export these results
+Containerise the API server
 Build a Cache to look up last searched location results following Google's caching restrictions(30 days max)
+Index data based on PlaceID, City and PrimaryType
