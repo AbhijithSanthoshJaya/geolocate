@@ -25,6 +25,21 @@ const (
 	BusinessStatusClosedPermanently = BusinessStatus("CLOSED_PERMANENTLY")
 )
 
+type OpeningHours struct {
+	Periods             []Period
+	WeekdayDescriptions []string
+	SecondaryHoursType  SecondaryHoursType
+	SpecialDays         []SpecialDay
+	NextOpenTime        string
+	NextCloseTime       string
+	OpenNow             bool
+}
+type SecondaryHoursType string
+
+type SpecialDay struct {
+	Date Date `json:"date"`
+}
+
 // Photo describes a photo available with a Search Result.
 type Photo struct {
 	// PhotoReference is used to identify the photo when you perform a Photo request.
@@ -36,4 +51,25 @@ type Photo struct {
 	// htmlAttributions contains any required attributions.
 	FlagContentUri string `json:"flagContentUri"`
 	GoogleMapsUri  string `json:"googleMapsUri"`
+}
+type Timezone struct {
+	Id      string `json:"id"`
+	Version string `json:"version"`
+}
+
+type Period struct {
+	Open  Point `json:"open"`
+	Close Point `json:"close"`
+}
+type Point struct {
+	Date      Date `json:"date"`
+	Truncated bool `json:"truncated"`
+	Day       int  `json:"day"`
+	Hour      int  `json:"hour"`
+	Minute    int  `json:"minute"`
+}
+type Date struct {
+	Year  int `json:"year"`
+	Month int `json:"month"`
+	Day   int `json:"day"`
 }
