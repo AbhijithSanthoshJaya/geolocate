@@ -11,13 +11,13 @@ import (
 	"github.com/geolocate/client"
 )
 
-// New Places API endpoints that need to be queried for all new API Keys
+// New Places API endpoints that need to be queried for all Nearby Search
 var placesNearbySearchAPI = &client.ApiConfig{
 	Host: "https://places.googleapis.com",
 	Path: "/v1/places:searchNearby",
 }
 
-// Converts PlacesHeader into a map to be used as HTTP header in POST request to Placed API
+// Converts PlacesHeader into a map to be used as HTTP header in POST request to Places API
 func (h *PlacesHeader) Headers() map[string]string {
 	header := map[string]string{}
 	fieldMaskHeader := FieldMaskHeader(h.PlaceFieldMasks)
@@ -62,6 +62,23 @@ type NearbySearchRequest struct {
 	RankPreference       RankPreference       `json:"rankPreference,omitempty"`
 }
 
+// New Places API endpoints that need to be queried for all Nearby Search
+var placesTextSearchAPI = &client.ApiConfig{
+	Host: "https://places.googleapis.com",
+	Path: "/v1/places:searchText",
+}
+
+type TextSearchRequest struct {
+	TextQuery                        string               `json:"textQuery"`
+	IncludedType                     string               `json:"includedType,omitempty"`
+	IncludePureServiceAreaBusinesses bool                 `json:"includePureServiceAreaBusinesses,omitempty"`
+	PageSize                         int                  `json:"pageSize,omitempty"`
+	PageToken                        string               `json:"pageToken,omitempty"`
+	StrictTypeFiltering              bool                 `json:"strictTypeFiltering,omitempty"`
+	LocationBias                     *LocationRestriction `json:"locationBias,omitempty"`
+	RankPreference                   RankPreference       `json:"rankPreference,omitempty"`
+}
+
 // NearbySearch lets you search for places within a specified area. You can refine
 // your search request by supplying the type of place you are searching for.
 func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
@@ -72,6 +89,21 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 		Places []Place `json:"places"`
 	}
 	if err := c.JsonPost(ctx, placesNearbySearchAPI, r, h, &response); err != nil {
+		return PlacesSearchResponse{}, err
+	}
+	return PlacesSearchResponse{response.Places}, nil
+}
+
+// TextSearch lets you search for places within a specified area that matches user text input. You can refine
+// your search request by supplying the text and location restictions you are searching for.
+func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
+	if r.TextQuery == "" {
+		return PlacesSearchResponse{}, errors.New("maps: Required fields Text Search is empty")
+	}
+	var response struct {
+		Places []Place `json:"places"`
+	}
+	if err := c.JsonPost(ctx, placesTextSearchAPI, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
 	return PlacesSearchResponse{response.Places}, nil
@@ -98,6 +130,13 @@ type LocationRestriction struct {
 type Circle struct {
 	Center LatLng `json:"center"`
 	Radius int64  `json:"radius"`
+}
+type LocationBias struct {
+	Rectangle Rectangle `json:"rectangle"`
+}
+type Rectangle struct {
+	Low  *LatLng `json:"low"`
+	High *LatLng `json:"high"`
 }
 type RankPreference string
 
