@@ -151,7 +151,7 @@ func (c *GeoClient) Geocode(ctx context.Context, r *GeocodingRequest) (Geocoding
 		respStatus
 	}
 
-	if err := c.JsonGet(ctx, geocodingAPI, r, &response); err != nil {
+	if err := c.JsonGet(ctx, geocodingAPI, r, nil, &response); err != nil {
 		return GeocodingResponse{}, err
 	}
 
@@ -179,7 +179,7 @@ func (c *GeoClient) ReverseGeocode(ctx context.Context, r *GeocodingRequest) (Ge
 		respStatus
 	}
 
-	if err := c.JsonGet(ctx, geocodingAPI, r, &response); err != nil {
+	if err := c.JsonGet(ctx, geocodingAPI, r, nil, &response); err != nil {
 		return GeocodingResponse{}, err
 	}
 
