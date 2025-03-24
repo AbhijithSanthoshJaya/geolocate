@@ -11,12 +11,13 @@ import (
 	"github.com/geolocate/client"
 )
 
-// New Places API endpoints that need to be queried for all Nearby Search
-var placesSearchAPI = &client.ApiConfig{
-	Host:  "https://places.googleapis.com",
-	FPath: "/v1/places",
-	Path:  "",
+// New Places API endpoints that need to be queried for all Place related Search
+type placesAPI struct {
+	Host     string
+	BasePath string
 }
+
+var places = placesAPI{Host: "https://places.googleapis.com", BasePath: "/v1/places"}
 
 // Converts PlacesHeader into a map to be used as HTTP header in POST request to Places API
 func (h *PlacesHeader) Headers() map[string]string {
@@ -88,8 +89,11 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 	var response struct {
 		Places []Place `json:"places"`
 	}
-	placesSearchAPI.Path = placesSearchAPI.FPath + ":searchNearby"
-	if err := c.JsonPost(ctx, placesSearchAPI, r, h, &response); err != nil {
+	api := &client.ApiConfig{
+		Host: places.Host,
+		Path: places.BasePath + ":searchNearby",
+	}
+	if err := c.JsonPost(ctx, api, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
 	return PlacesSearchResponse{response.Places}, nil
@@ -104,9 +108,11 @@ func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *Pla
 	var response struct {
 		Places []Place `json:"places"`
 	}
-	placesSearchAPI.Path = placesSearchAPI.FPath + ":searchText"
-
-	if err := c.JsonPost(ctx, placesSearchAPI, r, h, &response); err != nil {
+	api := &client.ApiConfig{
+		Host: places.Host,
+		Path: places.BasePath + ":searchText",
+	}
+	if err := c.JsonPost(ctx, api, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
 	return PlacesSearchResponse{response.Places}, nil
@@ -117,8 +123,11 @@ func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *Pla
 func (c *GeoClient) PlaceDetails(ctx context.Context, id string, h *PlacesHeader) (Place, error) {
 
 	var response Place
-	placesSearchAPI.Path = placesSearchAPI.FPath + "/" + id
-	if err := c.JsonGet(ctx, placesSearchAPI, nil, h, &response); err != nil {
+	api := &client.ApiConfig{
+		Host: places.Host,
+		Path: places.BasePath + "/" + id,
+	}
+	if err := c.JsonGet(ctx, api, nil, h, &response); err != nil {
 		return Place{}, err
 	}
 	return response, nil

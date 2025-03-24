@@ -43,7 +43,7 @@ func Test_TextSearch_locationBias(t *testing.T) {
 		log.Fatal("Error loading .env")
 	}
 	apiKey := os.Getenv("API_KEY")
-	testclient, err := client.NewClient(client.AddAPIKey(apiKey))
+	testclient, err := client.NewClient(client.AddAPIKey(apiKey), client.WithRateLimit(10))
 	assert.NoError(t, err)
 	assert.NotNil(t, testclient)
 	testGeoClient := GeoClient{testclient}
@@ -70,7 +70,7 @@ func Test_PlaceDetails(t *testing.T) {
 	assert.NotNil(t, testclient)
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
-	placeID := "ChIJy3Cb7veIWUsRDRRJADIvnms"
+	placeID := "ChIJy3Cb7veIWUsRDRRJADIvnms" // a real world location's placeID as set by Google
 
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
 	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: false}

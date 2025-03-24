@@ -21,9 +21,8 @@ type apiHeader interface {
 	Headers() map[string]string
 }
 type ApiConfig struct {
-	Host  string
-	Path  string
-	FPath string
+	Host string
+	Path string
 }
 
 var defaultRequestsPerSecond = 10
