@@ -21,8 +21,9 @@ type apiHeader interface {
 	Headers() map[string]string
 }
 type ApiConfig struct {
-	Host string
-	Path string
+	Host  string
+	Path  string
+	FPath string
 }
 
 var defaultRequestsPerSecond = 10
@@ -84,7 +85,7 @@ func (c *Client) do(ctx context.Context, req *http.Request) (*http.Response, err
 	}
 	return client.Do(req.WithContext(ctx))
 }
-func (c *Client) get(ctx context.Context, config *ApiConfig, apiReq apiRequest) (*http.Response, error) {
+func (c *Client) get(ctx context.Context, config *ApiConfig, apiReq apiRequest, apiHeader apiHeader) (*http.Response, error) {
 	if err := c.waitRateLimit(ctx); err != nil {
 		return nil, err
 	}
@@ -95,20 +96,28 @@ func (c *Client) get(ctx context.Context, config *ApiConfig, apiReq apiRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("error: %s", err)
 	}
-	req.Header.Add("Accept", "application/json")
-	q, err := c.setAuthQueryParam(apiReq.Params())
-	if err != nil {
-		return nil, err
+	if apiHeader != nil { // if you want to set header in GET request, pass it from the caller
+		headers := apiHeader.Headers()
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
 	}
-	req.URL.RawQuery = q
+	if apiReq != nil {
+		q, err := c.setAuthQueryParam(apiReq.Params())
+		if err != nil {
+			return nil, err
+		}
+		req.URL.RawQuery = q
+	}
+
 	resp, err := c.do(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error %s", err)
 	}
 	return resp, nil
 }
-func (c *Client) JsonGet(ctx context.Context, config *ApiConfig, apiReq apiRequest, resp interface{}) error {
-	httpResp, err := c.get(ctx, config, apiReq)
+func (c *Client) JsonGet(ctx context.Context, config *ApiConfig, apiReq apiRequest, apiHeader apiHeader, resp interface{}) error {
+	httpResp, err := c.get(ctx, config, apiReq, apiHeader)
 	if err != nil {
 		return err
 	}
@@ -152,8 +161,6 @@ func (c *Client) post(ctx context.Context, config *ApiConfig, apiReq interface{}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	// req.Header.Set("Content-Type", "application/json")
-	// req.Header.Set("X-Goog-FieldMask", fieldMask) //places.location,places.rating,places.priceRange, places.displayName,places.formattedAddress,places.types,places.websiteUri
 	return c.do(ctx, req)
 }
 

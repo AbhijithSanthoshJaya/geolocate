@@ -11,19 +11,24 @@ import (
 	"github.com/geolocate/client"
 )
 
-// New Places API endpoints that need to be queried for all new API Keys
-var placesNearbySearchAPI = &client.ApiConfig{
-	Host: "https://places.googleapis.com",
-	Path: "/v1/places:searchNearby",
+// New Places API endpoints that need to be queried for all Nearby Search
+var placesSearchAPI = &client.ApiConfig{
+	Host:  "https://places.googleapis.com",
+	FPath: "/v1/places",
+	Path:  "",
 }
 
-// Converts PlacesHeader into a map to be used as HTTP header in POST request to Placed API
+// Converts PlacesHeader into a map to be used as HTTP header in POST request to Places API
 func (h *PlacesHeader) Headers() map[string]string {
 	header := map[string]string{}
-	fieldMaskHeader := FieldMaskHeader(h.PlaceFieldMasks)
+	prefix := ""
+	if h.MaskPrefix {
+		prefix = "places." // Only for Places(plural) requests. For looking up a single place, we dont need this prefix. This api is wierd
+	}
+	fieldMaskHeader := FieldMaskHeader(h.PlaceFieldMasks, prefix)
 	header["X-Goog-Api-Key"] = h.ApiKey
 	header["X-Goog-FieldMask"] = strings.Join(fieldMaskHeader, ",")
-	header["Content-Type"] = "application/json"
+	header["Content-Type"] = h.ContentType
 	return header
 }
 
@@ -62,6 +67,18 @@ type NearbySearchRequest struct {
 	RankPreference       RankPreference       `json:"rankPreference,omitempty"`
 }
 
+type TextSearchRequest struct {
+	TextQuery                        string                  `json:"textQuery"`
+	IncludedType                     string                  `json:"includedType,omitempty"`
+	IncludePureServiceAreaBusinesses bool                    `json:"includePureServiceAreaBusinesses,omitempty"`
+	PageSize                         int                     `json:"pageSize,omitempty"`
+	PageToken                        string                  `json:"pageToken,omitempty"`
+	StrictTypeFiltering              bool                    `json:"strictTypeFiltering,omitempty"`
+	LocationBias                     *LocationRestriction    `json:"locationBias,omitempty"`
+	RankPreference                   RankPreference          `json:"rankPreference,omitempty"`
+	LocationRestriction              *RectangularRestriction `json:"locationRestriction,omitempty"`
+}
+
 // NearbySearch lets you search for places within a specified area. You can refine
 // your search request by supplying the type of place you are searching for.
 func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
@@ -71,23 +88,53 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 	var response struct {
 		Places []Place `json:"places"`
 	}
-	if err := c.JsonPost(ctx, placesNearbySearchAPI, r, h, &response); err != nil {
+	placesSearchAPI.Path = placesSearchAPI.FPath + ":searchNearby"
+	if err := c.JsonPost(ctx, placesSearchAPI, r, h, &response); err != nil {
+		return PlacesSearchResponse{}, err
+	}
+	return PlacesSearchResponse{response.Places}, nil
+}
+
+// TextSearch lets you search for places within a specified area that matches user text input. You can refine
+// your search request by supplying the text and location restictions you are searching for.
+func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
+	if r.TextQuery == "" {
+		return PlacesSearchResponse{}, errors.New("maps: Required fields Text Search is empty")
+	}
+	var response struct {
+		Places []Place `json:"places"`
+	}
+	placesSearchAPI.Path = placesSearchAPI.FPath + ":searchText"
+
+	if err := c.JsonPost(ctx, placesSearchAPI, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
 	return PlacesSearchResponse{response.Places}, nil
 
 }
 
+// Lookup a place details using placeID.
+func (c *GeoClient) PlaceDetails(ctx context.Context, id string, h *PlacesHeader) (Place, error) {
+
+	var response Place
+	placesSearchAPI.Path = placesSearchAPI.FPath + "/" + id
+	if err := c.JsonGet(ctx, placesSearchAPI, nil, h, &response); err != nil {
+		return Place{}, err
+	}
+	return response, nil
+}
+
 type PlacesHeader struct {
 	ContentType     string
 	ApiKey          string
 	PlaceFieldMasks []PlaceFieldMask
+	MaskPrefix      bool
 }
 
-func FieldMaskHeader(placeFieldMasks []PlaceFieldMask) []string {
+func FieldMaskHeader(placeFieldMasks []PlaceFieldMask, prefix string) []string {
 	var fieldMask []string
 	for _, fields := range placeFieldMasks {
-		fieldMask = append(fieldMask, string("places."+fields))
+		fieldMask = append(fieldMask, string(prefix+string(fields)))
 	}
 	return fieldMask
 }
@@ -98,6 +145,13 @@ type LocationRestriction struct {
 type Circle struct {
 	Center LatLng `json:"center"`
 	Radius int64  `json:"radius"`
+}
+type RectangularRestriction struct {
+	Rectangle Rectangle `json:"rectangle"`
+}
+type Rectangle struct {
+	Low  LatLng `json:"low"`
+	High LatLng `json:"high"`
 }
 type RankPreference string
 
