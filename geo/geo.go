@@ -18,8 +18,8 @@ var geocodingAPI = &client.ApiConfig{
 
 // LatLng represents a location on the Earth.
 type LatLng struct {
-	Lat float64 `json:"latitude"`
-	Lng float64 `json:"longitude"`
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
 }
 
 // LatLngBounds represents a bounded square area on the Earth.
@@ -99,7 +99,7 @@ type GeocodingResult struct {
 	Geometry          AddressGeometry    `json:"geometry"`
 	Types             []string           `json:"types"`
 	PlaceID           string             `json:"place_id"`
-	NavigationPoints  []Location         `json:"navigation_points"`
+	NavigationPoints  []NavigPoint       `json:"navigation_points"`
 
 	// PartialMatch indicates that the geocoder did not return an exact match for
 	// the original request, though it was able to match part of the requested address.
@@ -109,6 +109,9 @@ type GeocodingResult struct {
 	// where most buildings are not numbered or streets are not accurately named.
 	// In our app, we only want to provide locations with valid address
 	PlusCode PlusCode `json:"plus_code"`
+}
+type NavigPoint struct {
+	Location Location `json:"location"`
 }
 type Location struct {
 	Latitude  float64 `json:"latitude"`

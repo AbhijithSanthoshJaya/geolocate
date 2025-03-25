@@ -15,8 +15,8 @@ func main() {
 
 	// Define routes
 	r.HandleFunc("/getplace/{placeID}", server.GetPlacebyId).Methods("GET")
-	r.HandleFunc("/geocode/", server.GetGeocode).Methods("GET")
-	r.HandleFunc("/geodecode/", server.GetGeodecode).Methods("GET")
+	r.HandleFunc("/geocode", server.GetGeocode).Methods("GET")
+	r.HandleFunc("/geodecode", server.GetGeodecode).Methods("GET")
 
 	// Start server
 	srv := &http.Server{

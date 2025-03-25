@@ -11,18 +11,18 @@ type HttpError struct {
 }
 
 func (e HttpError) Error() string {
-	return fmt.Sprintf("HttpError: %d: %s", e.Status, getErrorMessage(int(e.Status)))
+	return fmt.Sprintf("HttpError: %d , %s", e.Status, getErrorMessage(int(e.Status)))
 }
 
 // HTTPErrorMessages maps status codes to user-friendly messages
 var HTTPErrorMessages = map[int]string{
-	http.StatusBadRequest:          "Invalid request. Please check your input.",
-	http.StatusUnauthorized:        "Unauthorized. Please provide valid credentials.",
-	http.StatusForbidden:           "Access denied. You do not have permission.",
+	http.StatusBadRequest:          "Invalid request. ",
+	http.StatusUnauthorized:        "Unauthorized. Invalid credentials.",
+	http.StatusForbidden:           "Access denied. Check permissions.",
 	http.StatusNotFound:            "Resource not found.",
-	http.StatusInternalServerError: "Internal Server side error. Please try again later.",
-	http.StatusBadGateway:          "Bad Gateway. Please try again later.",
-	http.StatusServiceUnavailable:  "Service is temporarily unavailable. Please try again later.",
+	http.StatusInternalServerError: "Internal Server side error.",
+	http.StatusBadGateway:          "Bad Gateway. ",
+	http.StatusServiceUnavailable:  "Service is temporarily unavailable.",
 }
 
 // GetErrorMessage returns a message based on the HTTP status code
