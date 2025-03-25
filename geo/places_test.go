@@ -71,7 +71,6 @@ func Test_PlaceDetails(t *testing.T) {
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
 	placeID := "ChIJy3Cb7veIWUsRDRRJADIvnms" // a real world location's placeID as set by Google
-
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
 	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: false}
 	resp, err := testGeoClient.PlaceDetails(ctx, placeID, &header)

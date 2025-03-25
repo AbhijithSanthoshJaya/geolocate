@@ -108,7 +108,7 @@ func (c *Client) get(ctx context.Context, config *ApiConfig, apiReq apiRequest, 
 		}
 		req.URL.RawQuery = q
 	}
-
+	fmt.Printf("Request to google: %+v", req)
 	resp, err := c.do(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error %s", err)

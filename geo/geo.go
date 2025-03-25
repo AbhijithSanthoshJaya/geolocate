@@ -162,9 +162,9 @@ func (c *GeoClient) Geocode(ctx context.Context, r *GeocodingRequest) (Geocoding
 	return GeocodingResponse{response.Results}, nil
 }
 
-// ReverseGeocode makes a Reverse Geocoding API request, returning a human readable address
+// Geodecode makes a Reverse Geocoding API request, returning a human readable address
 // from Geocoded(Lat,Lng) or placeID type input
-func (c *GeoClient) ReverseGeocode(ctx context.Context, r *GeocodingRequest) (GeocodingResponse, error) {
+func (c *GeoClient) Geodecode(ctx context.Context, r *GeocodingRequest) (GeocodingResponse, error) {
 	// Either LatLng or PlaceID is necessary
 	if r.Address != "" {
 		return GeocodingResponse{}, errors.New("maps: Addr field must be empty,provide only latlng or placeID")
