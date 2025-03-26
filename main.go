@@ -17,6 +17,11 @@ func main() {
 	r.HandleFunc("/getplace/{placeID}", server.GetPlacebyId).Methods("GET")
 	r.HandleFunc("/geocode", server.GetGeocode).Methods("GET")
 	r.HandleFunc("/geodecode", server.GetGeodecode).Methods("GET")
+	r.HandleFunc("/nearbysearch", server.GetPlacesNearby).Methods("POST")
+	r.HandleFunc("/textsearch", server.GetPlacesFromText).Methods("POST")
+
+	r.HandleFunc("/types", server.GetAllTypes).Methods("GET")
+	r.HandleFunc("/defaulttypes", server.GetDefaultTypes).Methods("GET")
 
 	// Start server
 	srv := &http.Server{

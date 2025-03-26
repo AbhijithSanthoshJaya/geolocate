@@ -26,10 +26,10 @@ func (h *PlacesHeader) Headers() map[string]string {
 	if h.MaskPrefix {
 		prefix = "places." // Only for Places(plural) requests. For looking up a single place, we dont need this prefix. This api is wierd
 	}
-	fieldMaskHeader := FieldMaskHeader(h.PlaceFieldMasks, prefix)
-	header["X-Goog-Api-Key"] = h.ApiKey
+	fieldMaskHeader := FieldMaskHeader(h.PlaceHeader.PlaceFieldMasks, prefix)
+	header["X-Goog-Api-Key"] = h.PlaceHeader.ApiKey
 	header["X-Goog-FieldMask"] = strings.Join(fieldMaskHeader, ",")
-	header["Content-Type"] = h.ContentType
+	header["Content-Type"] = h.PlaceHeader.ContentType
 	return header
 }
 
@@ -49,7 +49,7 @@ type Place struct {
 	Types               []string       `json:"types"`
 	FormattedAddress    string         `json:"formattedAddress"`
 	Rating              int32          `json:"rating"`
-	Location            *LatLng        `json:"location"`
+	Location            Location       `json:"location"`
 	BusinessStatus      BusinessStatus `json:"businessStatus"`
 	PhoneNumber         string         `json:"nationalPhoneNumber"`
 	Photos              []Photo        `json:"photos,omitempty"`
@@ -59,7 +59,7 @@ type Place struct {
 
 type NearbySearchRequest struct {
 	RegionCode           string               `json:"regionCode,omitempty"`
-	IncludedTypes        []string             `json:"includedTypes,omitempty"`
+	IncludedTypes        []PlaceType          `json:"includedTypes,omitempty"`
 	ExcludedTypes        []string             `json:"excludedTypes,omitempty"`
 	IncludedPrimaryTypes []string             `json:"includedPrimaryTypes,omitempty"`
 	ExcludedPrimaryTypes []string             `json:"excludedPrimaryTypes,omitempty"`
@@ -72,7 +72,7 @@ type TextSearchRequest struct {
 	TextQuery                        string                  `json:"textQuery"`
 	IncludedType                     string                  `json:"includedType,omitempty"`
 	IncludePureServiceAreaBusinesses bool                    `json:"includePureServiceAreaBusinesses,omitempty"`
-	PageSize                         int                     `json:"pageSize,omitempty"`
+	PageSize                         int32                   `json:"pageSize,omitempty"`
 	PageToken                        string                  `json:"pageToken,omitempty"`
 	StrictTypeFiltering              bool                    `json:"strictTypeFiltering,omitempty"`
 	LocationBias                     *LocationRestriction    `json:"locationBias,omitempty"`
@@ -132,12 +132,51 @@ func (c *GeoClient) PlaceDetails(ctx context.Context, id string, h *PlacesHeader
 	}
 	return response, nil
 }
+func GetAllPlacesTypes() []PlaceType {
+	AllPlaceTypes := []PlaceType{
+		AcaiShop, AfghaniRestaurant, AfricanRestaurant, AmericanRestaurant,
+		AsianRestaurant, BagelShop, Bakery, Bar, BarAndGrill, BarbecueRestaurant,
+		BrazilianRestaurant, BreakfastRestaurant, BrunchRestaurant, BuffetRestaurant,
+		Cafe, Cafeteria, CandyStore, CatCafe, ChineseRestaurant, ChocolateFactory,
+		ChocolateShop, CoffeeShop, Confectionery, Deli, DessertRestaurant,
+		DessertShop, Diner, DogCafe, DonutShop, FastFoodRestaurant,
+		FineDiningRestaurant, FoodCourt, FrenchRestaurant, GreekRestaurant,
+		HamburgerRestaurant, IceCreamShop, IndianRestaurant, IndonesianRestaurant,
+		ItalianRestaurant, JapaneseRestaurant, JuiceShop, KoreanRestaurant,
+		LebaneseRestaurant, MealDelivery, MealTakeaway, MediterraneanRestaurant,
+		MexicanRestaurant, MiddleEasternRestaurant, PizzaRestaurant, Pub,
+		RamenRestaurant, Restaurant, SandwichShop, SeafoodRestaurant,
+		SpanishRestaurant, SteakHouse, SushiRestaurant, TeaHouse, ThaiRestaurant,
+		TurkishRestaurant, VeganRestaurant, VegetarianRestaurant,
+		VietnameseRestaurant, WineBar,
+	}
+	return AllPlaceTypes
+}
+func GetDefaultPlacesTypes() []PlaceType {
+	DefaultPlaces := []PlaceType{
+		AsianRestaurant, BagelShop, Bakery, Bar, BarAndGrill, BarbecueRestaurant, BreakfastRestaurant, BrunchRestaurant, BuffetRestaurant,
+		Cafe, CatCafe, ChocolateShop, CoffeeShop, DessertRestaurant,
+		DessertShop, Diner, DogCafe, FastFoodRestaurant,
+		FineDiningRestaurant, IceCreamShop, IndianRestaurant, IndonesianRestaurant,
+		ItalianRestaurant, JapaneseRestaurant, JuiceShop, KoreanRestaurant,
+		LebaneseRestaurant, MediterraneanRestaurant,
+		MexicanRestaurant, MiddleEasternRestaurant, PizzaRestaurant, Pub,
+		RamenRestaurant, Restaurant, SeafoodRestaurant,
+		SpanishRestaurant, SteakHouse, SushiRestaurant, TeaHouse, ThaiRestaurant,
+		TurkishRestaurant, VeganRestaurant, VegetarianRestaurant,
+		VietnameseRestaurant, WineBar,
+	}
+	return DefaultPlaces
+}
 
 type PlacesHeader struct {
+	PlaceHeader PlaceHeader
+	MaskPrefix  bool
+}
+type PlaceHeader struct {
 	ContentType     string
 	ApiKey          string
 	PlaceFieldMasks []PlaceFieldMask
-	MaskPrefix      bool
 }
 
 func FieldMaskHeader(placeFieldMasks []PlaceFieldMask, prefix string) []string {
@@ -152,8 +191,8 @@ type LocationRestriction struct {
 	Circle Circle `json:"circle"`
 }
 type Circle struct {
-	Center LatLng `json:"center"`
-	Radius int64  `json:"radius"`
+	Center Location `json:"center"`
+	Radius int64    `json:"radius"`
 }
 type RectangularRestriction struct {
 	Rectangle Rectangle `json:"rectangle"`
@@ -168,13 +207,6 @@ const (
 	RankPreferenceUnspecified = RankPreference("RANK_PREFERENCE_UNSPECIFIED")
 	RankPreferenceDistance    = RankPreference("DISTANCE")
 	RankPreferencePopularity  = RankPreference("POPULARITY")
-)
-
-type PlaceTypes string
-
-const (
-	IncludedTypesRestaurant = PlaceTypes("restaurant")
-	IncludedTypeBar         = PlaceTypes("bar")
 )
 
 type PlaceFieldMask string

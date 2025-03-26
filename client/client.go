@@ -159,6 +159,7 @@ func (c *Client) post(ctx context.Context, config *ApiConfig, apiReq interface{}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
+	fmt.Printf("Post Request: %+v", req)
 	return c.do(ctx, req)
 }
 

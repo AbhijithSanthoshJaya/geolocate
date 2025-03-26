@@ -23,12 +23,13 @@ func Test_PlacesNearby(t *testing.T) {
 	assert.NotNil(t, testclient)
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
-	incTypes := []string{"restaurant"}
+	incTypes := []PlaceType{"restaurant"}
 	location := LocationRestriction{
-		Circle{Center: LatLng{Lat: 44.67775, Lng: -63.67206}, Radius: 10000}}
+		Circle{Center: Location{Latitude: 44.67775, Longitude: -63.67206}, Radius: 10000}}
 	req := NearbySearchRequest{LocationRestriction: &location, MaxResultCount: 1, IncludedTypes: incTypes}
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: true}
+	placeHeader := PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
+	header := PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: true}
 	resp, err := testGeoClient.NearbySearch(ctx, &req, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -50,10 +51,11 @@ func Test_TextSearch_locationBias(t *testing.T) {
 	ctx := context.Background()
 	textQuery := "bowling arena"
 	locationBias := LocationRestriction{
-		Circle{Center: LatLng{Lat: 44.67775, Lng: -63.67206}, Radius: 5000}}
+		Circle{Center: Location{Latitude: 44.67775, Longitude: -63.67206}, Radius: 5000}}
 	req := TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: RankPreferenceDistance, PageSize: 5}
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: true}
+	placeHeader := PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
+	header := PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: true}
 	resp, err := testGeoClient.TextSearch(ctx, &req, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -72,7 +74,8 @@ func Test_PlaceDetails(t *testing.T) {
 	ctx := context.Background()
 	placeID := "ChIJy3Cb7veIWUsRDRRJADIvnms" // a real world location's placeID as set by Google
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: false}
+	placeHeader := PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
+	header := PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: false}
 	resp, err := testGeoClient.PlaceDetails(ctx, placeID, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
