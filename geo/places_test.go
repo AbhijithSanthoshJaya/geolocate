@@ -28,8 +28,7 @@ func Test_PlacesNearby(t *testing.T) {
 		Circle{Center: Location{Latitude: 44.67775, Longitude: -63.67206}, Radius: 10000}}
 	req := NearbySearchRequest{LocationRestriction: &location, MaxResultCount: 1, IncludedTypes: incTypes}
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	placeHeader := PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
-	header := PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: true}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: true, TokenMask: ""}
 	resp, err := testGeoClient.NearbySearch(ctx, &req, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -54,8 +53,7 @@ func Test_TextSearch_locationBias(t *testing.T) {
 		Circle{Center: Location{Latitude: 44.67775, Longitude: -63.67206}, Radius: 5000}}
 	req := TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: RankPreferenceDistance, PageSize: 5}
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	placeHeader := PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
-	header := PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: true}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: true, TokenMask: ""}
 	resp, err := testGeoClient.TextSearch(ctx, &req, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -74,8 +72,7 @@ func Test_PlaceDetails(t *testing.T) {
 	ctx := context.Background()
 	placeID := "ChIJy3Cb7veIWUsRDRRJADIvnms" // a real world location's placeID as set by Google
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	placeHeader := PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
-	header := PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: false}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: false, TokenMask: ""}
 	resp, err := testGeoClient.PlaceDetails(ctx, placeID, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)

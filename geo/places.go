@@ -3,6 +3,7 @@ package geo
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 
 	// Included for image/jpeg's decoder
@@ -23,13 +24,13 @@ var places = placesAPI{Host: "https://places.googleapis.com", BasePath: "/v1/pla
 func (h *PlacesHeader) Headers() map[string]string {
 	header := map[string]string{}
 	prefix := ""
-	if h.MaskPrefix {
+	if h.FieldMaskPrefix {
 		prefix = "places." // Only for Places(plural) requests. For looking up a single place, we dont need this prefix. This api is wierd
 	}
-	fieldMaskHeader := FieldMaskHeader(h.PlaceHeader.PlaceFieldMasks, prefix)
-	header["X-Goog-Api-Key"] = h.PlaceHeader.ApiKey
+	fieldMaskHeader := FieldMaskHeader(h.FieldMasks, prefix, h.TokenMask)
+	header["X-Goog-Api-Key"] = os.Getenv("API_KEY")
 	header["X-Goog-FieldMask"] = strings.Join(fieldMaskHeader, ",")
-	header["Content-Type"] = h.PlaceHeader.ContentType
+	header["Content-Type"] = "application/json"
 	return header
 }
 
@@ -167,23 +168,23 @@ func GetDefaultPlacesTypes() []PlaceType {
 }
 
 type PlacesHeader struct {
-	PlaceHeader PlaceHeader
-	MaskPrefix  bool
+	FieldMasks      []PlaceFieldMask
+	FieldMaskPrefix bool
+	TokenMask       string
 }
-type PlaceHeader struct {
-	ContentType     string
-	ApiKey          string
-	PlaceFieldMasks []PlaceFieldMask
+type StaticHeader struct {
+	ContentType string
+	ApiKey      string
+	FieldMasks  []PlaceFieldMask
 }
 
-func FieldMaskHeader(placeFieldMasks []PlaceFieldMask, prefix string) []string {
+func FieldMaskHeader(placeFieldMasks []PlaceFieldMask, prefix string, tokenMask string) []string {
 	var fieldMask []string
 	for _, field := range placeFieldMasks {
-		if field != PlaceFieldNextPageToken {
-			fieldMask = append(fieldMask, string(prefix+string(field)))
-		} else {
-			fieldMask = append(fieldMask, string(field))
-		}
+		fieldMask = append(fieldMask, string(prefix+string(field)))
+	}
+	if tokenMask != "" {
+		fieldMask = append(fieldMask, tokenMask)
 	}
 	return fieldMask
 }
@@ -224,5 +225,5 @@ const (
 	PlaceFieldMaskRatings              = PlaceFieldMask("rating")
 	PlaceFieldMaskTypes                = PlaceFieldMask("types")
 	PlaceFieldMaskOpeningHours         = PlaceFieldMask("regularOpeningHours")
-	PlaceFieldNextPageToken            = PlaceFieldMask("nextPageToken")
 )
+const MaskNextPageToken = "nextPageToken"

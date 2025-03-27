@@ -14,9 +14,8 @@ import (
 
 var apiKey = os.Getenv("API_KEY")
 var defaultFieldMask = []geo.PlaceFieldMask{geo.PlaceFieldMaskBusinessStatus, geo.PlaceFieldMaskFormattedAddress, geo.PlaceFieldMaskDispName, geo.PlaceFieldMaskPlaceID, geo.PlaceFieldMaskTypes, geo.PlaceFieldMaskOpeningHours}
-var defaultPlaceHeader = geo.PlaceHeader{PlaceFieldMasks: defaultFieldMask, ApiKey: apiKey, ContentType: "application/json"}
 var defaultIncType = geo.GetDefaultPlacesTypes() // If caller did not specify a valid place type, we go with default supported ones
-var resultCount = int32(5)
+var resultCount = int32(10)
 
 // Look up  Geocoded Map input with lat,long and fetch a human readable address metadata
 
@@ -113,7 +112,7 @@ func GetPlacesNearby(w http.ResponseWriter, r *http.Request) {
 	}
 	apiClient := geo.GeoClient{c}
 	ctx := context.Background()
-	header := geo.PlacesHeader{PlaceHeader: defaultPlaceHeader, MaskPrefix: true}
+	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: true}
 	place, err := apiClient.NearbySearch(ctx, &req, &header) //TODO
 	if err != nil {
 		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
@@ -134,6 +133,7 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: "Please enter a valid search text"})
 		return
 	}
+
 	textQuery := params.Text
 	locationBias := geo.LocationRestriction{Circle: geo.Circle{Center: geo.Location{Latitude: params.Lat, Longitude: params.Long}, Radius: params.Radius}}
 	req := geo.TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
@@ -144,12 +144,7 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 	}
 	apiClient := geo.GeoClient{c}
 	ctx := context.Background()
-	fieldMask := make([]geo.PlaceFieldMask, len(defaultFieldMask))
-	copy(fieldMask, defaultFieldMask)
-	fieldMask = append(fieldMask, geo.PlaceFieldNextPageToken)
-	placeHeader := geo.PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
-
-	header := geo.PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: true}
+	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: true, TokenMask: geo.MaskNextPageToken}
 	place, err := apiClient.TextSearch(ctx, &req, &header) //TODO
 	if err != nil {
 		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
@@ -173,7 +168,7 @@ func GetPlacebyId(w http.ResponseWriter, r *http.Request) {
 	}
 	apiClient := geo.GeoClient{c}
 	ctx := context.Background()
-	header := geo.PlacesHeader{PlaceHeader: defaultPlaceHeader, MaskPrefix: false}
+	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: false}
 	place, err := apiClient.PlaceDetails(ctx, placeID, &header)
 	if err != nil {
 		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
@@ -181,12 +176,18 @@ func GetPlacebyId(w http.ResponseWriter, r *http.Request) {
 	}
 	responseJson(w, http.StatusOK, Response{Data: place, Error: ""}) // Success
 }
+
+// Function to if check place is Open during the date,time specified in request
+func GetPlaceisOpen() {
+	// TODO
+}
 func GetAllTypes(w http.ResponseWriter, r *http.Request) {
 	placeTypes := geo.GetAllPlacesTypes()
 	responseJson(w, http.StatusOK, Response{Data: placeTypes, Error: ""}) // Success
 
 }
 
+// Default types our app supports and used to load Nearby Search results.
 func GetDefaultTypes(w http.ResponseWriter, r *http.Request) {
 	placeTypes := geo.GetDefaultPlacesTypes()
 	responseJson(w, http.StatusOK, Response{Data: placeTypes, Error: ""}) // Success

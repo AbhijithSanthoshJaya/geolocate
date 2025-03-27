@@ -139,4 +139,5 @@ const (
 	VegetarianRestaurant    PlaceType = "vegetarian_restaurant"
 	VietnameseRestaurant    PlaceType = "vietnamese_restaurant"
 	WineBar                 PlaceType = "wine_bar"
+	Club                    PlaceType = "night_club"
 )
