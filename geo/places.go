@@ -35,7 +35,8 @@ func (h *PlacesHeader) Headers() map[string]string {
 
 // API Response to call to Places API
 type PlacesSearchResponse struct {
-	Places []Place `json:"places"`
+	Places        []Place `json:"places"`
+	NextPageToken string  `json:"nextPageToken"`
 }
 type LocalizedText struct {
 	Text         string `json:"text"`
@@ -86,9 +87,7 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 	if r.LocationRestriction == nil {
 		return PlacesSearchResponse{}, errors.New("maps: Required fields LocationRestriction missing")
 	}
-	var response struct {
-		Places []Place `json:"places"`
-	}
+	var response PlacesSearchResponse
 	api := &client.ApiConfig{
 		Host: places.Host,
 		Path: places.BasePath + ":searchNearby",
@@ -96,18 +95,16 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 	if err := c.JsonPost(ctx, api, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
-	return PlacesSearchResponse{response.Places}, nil
+	return response, nil
 }
 
 // TextSearch lets you search for places within a specified area that matches user text input. You can refine
 // your search request by supplying the text and location restictions you are searching for.
 func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
-	if r.TextQuery == "" {
-		return PlacesSearchResponse{}, errors.New("maps: Required fields Text Search is empty")
+	if r.TextQuery == "" && r.PageToken == "" {
+		return PlacesSearchResponse{}, errors.New("maps: Required fields Text Search and nextPage token are empty")
 	}
-	var response struct {
-		Places []Place `json:"places"`
-	}
+	var response PlacesSearchResponse
 	api := &client.ApiConfig{
 		Host: places.Host,
 		Path: places.BasePath + ":searchText",
@@ -115,7 +112,7 @@ func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *Pla
 	if err := c.JsonPost(ctx, api, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
-	return PlacesSearchResponse{response.Places}, nil
+	return response, nil
 
 }
 
@@ -181,8 +178,12 @@ type PlaceHeader struct {
 
 func FieldMaskHeader(placeFieldMasks []PlaceFieldMask, prefix string) []string {
 	var fieldMask []string
-	for _, fields := range placeFieldMasks {
-		fieldMask = append(fieldMask, string(prefix+string(fields)))
+	for _, field := range placeFieldMasks {
+		if field != PlaceFieldNextPageToken {
+			fieldMask = append(fieldMask, string(prefix+string(field)))
+		} else {
+			fieldMask = append(fieldMask, string(field))
+		}
 	}
 	return fieldMask
 }
@@ -223,4 +224,5 @@ const (
 	PlaceFieldMaskRatings              = PlaceFieldMask("rating")
 	PlaceFieldMaskTypes                = PlaceFieldMask("types")
 	PlaceFieldMaskOpeningHours         = PlaceFieldMask("regularOpeningHours")
+	PlaceFieldNextPageToken            = PlaceFieldMask("nextPageToken")
 )

@@ -16,7 +16,7 @@ var apiKey = os.Getenv("API_KEY")
 var defaultFieldMask = []geo.PlaceFieldMask{geo.PlaceFieldMaskBusinessStatus, geo.PlaceFieldMaskFormattedAddress, geo.PlaceFieldMaskDispName, geo.PlaceFieldMaskPlaceID, geo.PlaceFieldMaskTypes, geo.PlaceFieldMaskOpeningHours}
 var defaultPlaceHeader = geo.PlaceHeader{PlaceFieldMasks: defaultFieldMask, ApiKey: apiKey, ContentType: "application/json"}
 var defaultIncType = geo.GetDefaultPlacesTypes() // If caller did not specify a valid place type, we go with default supported ones
-var resultCount = int32(10)
+var resultCount = int32(5)
 
 // Look up  Geocoded Map input with lat,long and fetch a human readable address metadata
 
@@ -81,10 +81,11 @@ type PlacesNearby struct {
 
 // Define a struct to match the expected JSON body
 type PlacesFromText struct {
-	Lat    float64 `json:"latitude"`
-	Long   float64 `json:"longitude"`
-	Radius int64   `json:"radius"`
-	Text   string  `json:"text"`
+	Lat       float64 `json:"latitude"`
+	Long      float64 `json:"longitude"`
+	Radius    int64   `json:"radius"`
+	Text      string  `json:"text,omitempty"`
+	PageToken string  `json:"pageToken,omitempty"`
 }
 
 // Find Places Nearby a user. Filter out places using incTypes to get results that match user preferences
@@ -134,9 +135,8 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	textQuery := params.Text
-
 	locationBias := geo.LocationRestriction{Circle: geo.Circle{Center: geo.Location{Latitude: params.Lat, Longitude: params.Long}, Radius: params.Radius}}
-	req := geo.TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount}
+	req := geo.TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
 	c, err := client.NewClient(client.AddAPIKey(apiKey))
 	if err != nil {
 		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
@@ -144,7 +144,12 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 	}
 	apiClient := geo.GeoClient{c}
 	ctx := context.Background()
-	header := geo.PlacesHeader{PlaceHeader: defaultPlaceHeader, MaskPrefix: true}
+	fieldMask := make([]geo.PlaceFieldMask, len(defaultFieldMask))
+	copy(fieldMask, defaultFieldMask)
+	fieldMask = append(fieldMask, geo.PlaceFieldNextPageToken)
+	placeHeader := geo.PlaceHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json"}
+
+	header := geo.PlacesHeader{PlaceHeader: placeHeader, MaskPrefix: true}
 	place, err := apiClient.TextSearch(ctx, &req, &header) //TODO
 	if err != nil {
 		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
@@ -158,7 +163,7 @@ func GetPlacebyId(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	placeID := vars["placeID"]
 	if placeID == "" {
-		responseJson(w, http.StatusBadRequest, nil)
+		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: "Please enter a valid placeId"})
 		return
 	}
 	c, err := client.NewClient(client.AddAPIKey(apiKey))
