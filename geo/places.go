@@ -152,8 +152,8 @@ func GetAllPlacesTypes() []PlaceType {
 }
 func GetDefaultPlacesTypes() []PlaceType {
 	DefaultPlaces := []PlaceType{
-		AsianRestaurant, BagelShop, Bakery, Bar, BarAndGrill, BarbecueRestaurant, BreakfastRestaurant, BrunchRestaurant, BuffetRestaurant,
-		Cafe, CatCafe, ChocolateShop, CoffeeShop, DessertRestaurant,
+		AsianRestaurant, BagelShop, Bar, BarAndGrill, BarbecueRestaurant, BreakfastRestaurant, BrunchRestaurant, BuffetRestaurant,
+		Cafe, CatCafe, CoffeeShop, DessertRestaurant,
 		DessertShop, Diner, DogCafe, FastFoodRestaurant,
 		FineDiningRestaurant, IceCreamShop, IndianRestaurant, IndonesianRestaurant,
 		ItalianRestaurant, JapaneseRestaurant, JuiceShop, KoreanRestaurant,
@@ -200,8 +200,8 @@ type RectangularRestriction struct {
 	Rectangle Rectangle `json:"rectangle"`
 }
 type Rectangle struct {
-	Low  LatLng `json:"low"`
-	High LatLng `json:"high"`
+	Low  Location `json:"low"`
+	High Location `json:"high"`
 }
 type RankPreference string
 

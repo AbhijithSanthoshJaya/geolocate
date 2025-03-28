@@ -134,6 +134,7 @@ func (c *Client) JsonPost(ctx context.Context, config *ApiConfig, apiReq interfa
 	}
 	defer httpResp.Body.Close()
 	if httpResp.StatusCode != http.StatusOK {
+		json.NewDecoder(httpResp.Body).Decode(resp)
 		return HttpError{Status: httpResp.StatusCode}
 	}
 	err = json.NewDecoder(httpResp.Body).Decode(resp)

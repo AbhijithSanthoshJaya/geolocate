@@ -14,8 +14,8 @@ import (
 
 var apiKey = os.Getenv("API_KEY")
 var defaultFieldMask = []geo.PlaceFieldMask{geo.PlaceFieldMaskBusinessStatus, geo.PlaceFieldMaskFormattedAddress, geo.PlaceFieldMaskDispName, geo.PlaceFieldMaskPlaceID, geo.PlaceFieldMaskTypes, geo.PlaceFieldMaskOpeningHours}
-var defaultIncType = geo.GetDefaultPlacesTypes() // If caller did not specify a valid place type, we go with default supported ones
 var resultCount = int32(10)
+var searchString = "in"
 
 // Look up  Geocoded Map input with lat,long and fetch a human readable address metadata
 
@@ -36,10 +36,10 @@ func GetGeodecode(w http.ResponseWriter, r *http.Request) {
 		responseJson(w, http.StatusBadRequest, Response{Error: err.Error()})
 		return
 	}
-	testGeoClient := geo.GeoClient{c}
+	apiClient := geo.GeoClient{c}
 	ctx := context.Background()
 	req := geo.GeocodingRequest{LatLng: &geo.LatLng{Lat: lat, Lng: long}}
-	geodecode, err := testGeoClient.Geodecode(ctx, &req)
+	geodecode, err := apiClient.Geodecode(ctx, &req)
 	if err != nil {
 		responseJson(w, http.StatusBadRequest, Response{Error: err.Error()})
 		return
@@ -57,11 +57,11 @@ func GetGeocode(w http.ResponseWriter, r *http.Request) {
 	}
 	queryParams := r.URL.Query()
 	placeAddress := queryParams.Get("address")
-	testGeoClient := geo.GeoClient{c}
+	apiClient := geo.GeoClient{c}
 	ctx := context.Background()
 	req := geo.GeocodingRequest{Address: placeAddress}
 	// fmt.Printf("%+v/n", req)
-	geocode, err := testGeoClient.Geocode(ctx, &req)
+	geocode, err := apiClient.Geocode(ctx, &req)
 	if err != nil {
 		responseJson(w, http.StatusBadRequest, Response{Error: err.Error()})
 		return
@@ -84,7 +84,8 @@ type PlacesFromText struct {
 	Long      float64 `json:"longitude"`
 	Radius    int64   `json:"radius"`
 	Text      string  `json:"text,omitempty"`
-	PageToken string  `json:"pageToken,omitempty"`
+	Locality  string  `json:"locality"`            // We need to get this in front end from user's lat,long and send it in their text search request. Eg: locality="Boston MA, USA". We append this to the Text( eg Skating Ring). So we limit the search to the city
+	PageToken string  `json:"pageToken,omitempty"` // Paginated results
 }
 
 // Find Places Nearby a user. Filter out places using incTypes to get results that match user preferences
@@ -95,7 +96,7 @@ func GetPlacesNearby(w http.ResponseWriter, r *http.Request) {
 		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: err.Error()})
 		return
 	}
-	incTypes := defaultIncType
+	incTypes := geo.GetDefaultPlacesTypes()
 	if len(params.Types) > 0 { // if we got a valid Type from user. Need to lookup Type A and B table to find match.TODO
 		var placeTypes []geo.PlaceType
 		for _, t := range params.Types {
@@ -134,9 +135,41 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	textQuery := params.Text
+	textQuery := params.Text + searchString + params.Locality
 	locationBias := geo.LocationRestriction{Circle: geo.Circle{Center: geo.Location{Latitude: params.Lat, Longitude: params.Long}, Radius: params.Radius}}
 	req := geo.TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
+	c, err := client.NewClient(client.AddAPIKey(apiKey))
+	if err != nil {
+		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
+		return
+	}
+	apiClient := geo.GeoClient{c}
+	ctx := context.Background()
+	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: true, TokenMask: geo.MaskNextPageToken}
+	place, err := apiClient.TextSearch(ctx, &req, &header) //TODO
+	if err != nil {
+		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
+		return
+	}
+	responseJson(w, http.StatusOK, Response{Data: place, Error: ""}) // Success
+}
+
+// Find places using search text within a given region using locationRestriction that match user preferences. WIP
+func GetPlacesBoundedText(w http.ResponseWriter, r *http.Request) {
+	var params PlacesFromText
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: err.Error()})
+		return
+	}
+	if params.Text == "" {
+		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: "Please enter a valid search text"})
+		return
+	}
+
+	textQuery := params.Text
+	locationRestriction := geo.RectangularRestriction{Rectangle: geo.Rectangle{Low: geo.Location{Latitude: params.Lat, Longitude: params.Long}, High: geo.Location{Latitude: params.Lat, Longitude: params.Long}}}
+	req := geo.TextSearchRequest{TextQuery: textQuery, LocationRestriction: &locationRestriction, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
 	c, err := client.NewClient(client.AddAPIKey(apiKey))
 	if err != nil {
 		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
@@ -179,7 +212,7 @@ func GetPlacebyId(w http.ResponseWriter, r *http.Request) {
 
 // Function to if check place is Open during the date,time specified in request
 func GetPlaceisOpen() {
-	// TODO
+	// TODO. We try to reconsile user passed date time range against regularOpenHours for the placeID reported by Google
 }
 func GetAllTypes(w http.ResponseWriter, r *http.Request) {
 	placeTypes := geo.GetAllPlacesTypes()

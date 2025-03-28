@@ -59,6 +59,28 @@ func Test_TextSearch_locationBias(t *testing.T) {
 	assert.NotNil(t, resp)
 }
 
+func Test_TextSearch_Restriction(t *testing.T) {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env")
+	}
+	apiKey := os.Getenv("API_KEY")
+	testclient, err := client.NewClient(client.AddAPIKey(apiKey), client.WithRateLimit(10))
+	assert.NoError(t, err)
+	assert.NotNil(t, testclient)
+	testGeoClient := GeoClient{testclient}
+	ctx := context.Background()
+	textQuery := "bowling arena"
+	locationRestriction := RectangularRestriction{Rectangle: Rectangle{Low: Location{Latitude: 44.711211, Longitude: -63.722595}, High: Location{Latitude: 44.581167099, Longitude: -63.5431991}}}
+
+	req := TextSearchRequest{TextQuery: textQuery, LocationRestriction: &locationRestriction, PageSize: 5}
+	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: true, TokenMask: ""}
+	resp, err := testGeoClient.TextSearch(ctx, &req, &header)
+	assert.Error(t, err) // TODO: Issue giving viewport as locationrestriction. HTTP 400
+	assert.Nil(t, resp)
+}
+
 func Test_PlaceDetails(t *testing.T) {
 	err := godotenv.Load(".env")
 	if err != nil {
