@@ -122,7 +122,7 @@ func GetPlacesNearby(w http.ResponseWriter, r *http.Request) {
 	responseJson(w, http.StatusOK, Response{Data: place, Error: ""}) // Success
 }
 
-// Find Places Nearby a user. Filter out places using incTypes to get results that match user preferences
+// Find Places from Text. Locality represents user's current city,province,country as string
 func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 	var params PlacesFromText
 	err := json.NewDecoder(r.Body).Decode(&params)
@@ -134,7 +134,6 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: "Please enter a valid search text"})
 		return
 	}
-
 	textQuery := params.Text + searchString + params.Locality
 	locationBias := geo.LocationRestriction{Circle: geo.Circle{Center: geo.Location{Latitude: params.Lat, Longitude: params.Long}, Radius: params.Radius}}
 	req := geo.TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
@@ -146,12 +145,12 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 	apiClient := geo.GeoClient{c}
 	ctx := context.Background()
 	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: true, TokenMask: geo.MaskNextPageToken}
-	place, err := apiClient.TextSearch(ctx, &req, &header) //TODO
+	place, err := apiClient.TextSearch(ctx, &req, &header)
 	if err != nil {
 		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
 		return
 	}
-	responseJson(w, http.StatusOK, Response{Data: place, Error: ""}) // Success
+	responseJson(w, http.StatusOK, Response{Data: place, Error: ""})
 }
 
 // Find places using search text within a given region using locationRestriction that match user preferences. WIP
@@ -166,9 +165,8 @@ func GetPlacesBoundedText(w http.ResponseWriter, r *http.Request) {
 		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: "Please enter a valid search text"})
 		return
 	}
-
 	textQuery := params.Text
-	locationRestriction := geo.RectangularRestriction{Rectangle: geo.Rectangle{Low: geo.Location{Latitude: params.Lat, Longitude: params.Long}, High: geo.Location{Latitude: params.Lat, Longitude: params.Long}}}
+	locationRestriction := geo.RectangularRestriction{Rectangle: geo.Rectangle{Low: geo.Location{Latitude: params.Lat, Longitude: params.Long}, High: geo.Location{Latitude: params.Lat, Longitude: params.Long}}} // Need to set this making call to Geodecode with a City + State+Country string. Low and High must be mapped correctly. TODO
 	req := geo.TextSearchRequest{TextQuery: textQuery, LocationRestriction: &locationRestriction, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
 	c, err := client.NewClient(client.AddAPIKey(apiKey))
 	if err != nil {

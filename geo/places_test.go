@@ -71,8 +71,7 @@ func Test_TextSearch_Restriction(t *testing.T) {
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
 	textQuery := "bowling arena"
-	locationRestriction := RectangularRestriction{Rectangle: Rectangle{Low: Location{Latitude: 44.711211, Longitude: -63.722595}, High: Location{Latitude: 44.581167099, Longitude: -63.5431991}}}
-
+	locationRestriction := RectangularRestriction{Rectangle: Rectangle{High: Location{Latitude: 44.711211, Longitude: -63.54319}, Low: Location{Latitude: 44.581167, Longitude: -63.72259}}} // Give Low and High value correctly from viewport object in Geodecode API
 	req := TextSearchRequest{TextQuery: textQuery, LocationRestriction: &locationRestriction, PageSize: 5}
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
 	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: true, TokenMask: ""}
