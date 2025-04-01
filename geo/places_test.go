@@ -23,12 +23,12 @@ func Test_PlacesNearby(t *testing.T) {
 	assert.NotNil(t, testclient)
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
-	incTypes := []string{"restaurant"}
+	incTypes := []PlaceType{"restaurant"}
 	location := LocationRestriction{
-		Circle{Center: LatLng{Lat: 44.67775, Lng: -63.67206}, Radius: 10000}}
+		Circle{Center: Location{Latitude: 44.67775, Longitude: -63.67206}, Radius: 10000}}
 	req := NearbySearchRequest{LocationRestriction: &location, MaxResultCount: 1, IncludedTypes: incTypes}
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: true}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: true, TokenMask: ""}
 	resp, err := testGeoClient.NearbySearch(ctx, &req, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -43,20 +43,41 @@ func Test_TextSearch_locationBias(t *testing.T) {
 		log.Fatal("Error loading .env")
 	}
 	apiKey := os.Getenv("API_KEY")
-	testclient, err := client.NewClient(client.AddAPIKey(apiKey))
+	testclient, err := client.NewClient(client.AddAPIKey(apiKey), client.WithRateLimit(10))
 	assert.NoError(t, err)
 	assert.NotNil(t, testclient)
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
 	textQuery := "bowling arena"
 	locationBias := LocationRestriction{
-		Circle{Center: LatLng{Lat: 44.67775, Lng: -63.67206}, Radius: 5000}}
+		Circle{Center: Location{Latitude: 44.67775, Longitude: -63.67206}, Radius: 5000}}
 	req := TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: RankPreferenceDistance, PageSize: 5}
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: true}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: true, TokenMask: ""}
 	resp, err := testGeoClient.TextSearch(ctx, &req, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
+}
+
+func Test_TextSearch_Restriction(t *testing.T) {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env")
+	}
+	apiKey := os.Getenv("API_KEY")
+	testclient, err := client.NewClient(client.AddAPIKey(apiKey), client.WithRateLimit(10))
+	assert.NoError(t, err)
+	assert.NotNil(t, testclient)
+	testGeoClient := GeoClient{testclient}
+	ctx := context.Background()
+	textQuery := "bowling arena"
+	locationRestriction := RectangularRestriction{Rectangle: Rectangle{High: Location{Latitude: 44.711211, Longitude: -63.54319}, Low: Location{Latitude: 44.581167, Longitude: -63.72259}}} // Give Low and High value correctly from viewport object in Geodecode API
+	req := TextSearchRequest{TextQuery: textQuery, LocationRestriction: &locationRestriction, PageSize: 5}
+	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: true, TokenMask: ""}
+	resp, err := testGeoClient.TextSearch(ctx, &req, &header)
+	assert.Error(t, err) // TODO: Issue giving viewport as locationrestriction. HTTP 400
+	assert.Nil(t, resp)
 }
 
 func Test_PlaceDetails(t *testing.T) {
@@ -70,10 +91,9 @@ func Test_PlaceDetails(t *testing.T) {
 	assert.NotNil(t, testclient)
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
-	placeID := "ChIJy3Cb7veIWUsRDRRJADIvnms"
-
+	placeID := "ChIJy3Cb7veIWUsRDRRJADIvnms" // a real world location's placeID as set by Google
 	fieldMask := []PlaceFieldMask{PlaceFieldMaskBusinessStatus, PlaceFieldMaskFormattedAddress, PlaceFieldMaskDispName, PlaceFieldMaskPlaceID, PlaceFieldMaskTypes, PlaceFieldMaskOpeningHours}
-	header := PlacesHeader{PlaceFieldMasks: fieldMask, ApiKey: apiKey, ContentType: "application/json", MaskPrefix: false}
+	header := PlacesHeader{FieldMasks: fieldMask, FieldMaskPrefix: false, TokenMask: ""}
 	resp, err := testGeoClient.PlaceDetails(ctx, placeID, &header)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)

@@ -21,9 +21,8 @@ type apiHeader interface {
 	Headers() map[string]string
 }
 type ApiConfig struct {
-	Host  string
-	Path  string
-	FPath string
+	Host string
+	Path string
 }
 
 var defaultRequestsPerSecond = 10
@@ -109,7 +108,6 @@ func (c *Client) get(ctx context.Context, config *ApiConfig, apiReq apiRequest, 
 		}
 		req.URL.RawQuery = q
 	}
-
 	resp, err := c.do(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error %s", err)
@@ -136,6 +134,7 @@ func (c *Client) JsonPost(ctx context.Context, config *ApiConfig, apiReq interfa
 	}
 	defer httpResp.Body.Close()
 	if httpResp.StatusCode != http.StatusOK {
+		json.NewDecoder(httpResp.Body).Decode(resp)
 		return HttpError{Status: httpResp.StatusCode}
 	}
 	err = json.NewDecoder(httpResp.Body).Decode(resp)
@@ -161,6 +160,7 @@ func (c *Client) post(ctx context.Context, config *ApiConfig, apiReq interface{}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
+	fmt.Printf("Post Request: %+v", req)
 	return c.do(ctx, req)
 }
 

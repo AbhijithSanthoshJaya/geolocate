@@ -18,8 +18,8 @@ var geocodingAPI = &client.ApiConfig{
 
 // LatLng represents a location on the Earth.
 type LatLng struct {
-	Lat float64 `json:"latitude"`
-	Lng float64 `json:"longitude"`
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
 }
 
 // LatLngBounds represents a bounded square area on the Earth.
@@ -99,7 +99,7 @@ type GeocodingResult struct {
 	Geometry          AddressGeometry    `json:"geometry"`
 	Types             []string           `json:"types"`
 	PlaceID           string             `json:"place_id"`
-	NavigationPoints  []Location         `json:"navigation_points"`
+	NavigationPoints  []NavigPoint       `json:"navigation_points"`
 
 	// PartialMatch indicates that the geocoder did not return an exact match for
 	// the original request, though it was able to match part of the requested address.
@@ -109,6 +109,9 @@ type GeocodingResult struct {
 	// where most buildings are not numbered or streets are not accurately named.
 	// In our app, we only want to provide locations with valid address
 	PlusCode PlusCode `json:"plus_code"`
+}
+type NavigPoint struct {
+	Location Location `json:"location"`
 }
 type Location struct {
 	Latitude  float64 `json:"latitude"`
@@ -162,9 +165,9 @@ func (c *GeoClient) Geocode(ctx context.Context, r *GeocodingRequest) (Geocoding
 	return GeocodingResponse{response.Results}, nil
 }
 
-// ReverseGeocode makes a Reverse Geocoding API request, returning a human readable address
+// Geodecode makes a Reverse Geocoding API request, returning a human readable address
 // from Geocoded(Lat,Lng) or placeID type input
-func (c *GeoClient) ReverseGeocode(ctx context.Context, r *GeocodingRequest) (GeocodingResponse, error) {
+func (c *GeoClient) Geodecode(ctx context.Context, r *GeocodingRequest) (GeocodingResponse, error) {
 	// Either LatLng or PlaceID is necessary
 	if r.Address != "" {
 		return GeocodingResponse{}, errors.New("maps: Addr field must be empty,provide only latlng or placeID")

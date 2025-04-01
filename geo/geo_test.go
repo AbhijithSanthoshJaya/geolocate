@@ -29,7 +29,7 @@ func Test_Geocode(t *testing.T) {
 	assert.NotNil(t, resp)
 }
 
-// Testing ReverseGeoCode encoder method for a real world address that is known
+// Testing Geodecode method for a real world address that is known
 func Test_ReverseGeocode(t *testing.T) {
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -42,7 +42,7 @@ func Test_ReverseGeocode(t *testing.T) {
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
 	req := GeocodingRequest{LatLng: &LatLng{Lat: float64(44.67775), Lng: float64(-63.67206)}}
-	resp, err := testGeoClient.ReverseGeocode(ctx, &req)
+	resp, err := testGeoClient.Geodecode(ctx, &req)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 }

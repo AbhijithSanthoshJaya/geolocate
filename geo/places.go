@@ -3,6 +3,7 @@ package geo
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 
 	// Included for image/jpeg's decoder
@@ -11,30 +12,32 @@ import (
 	"github.com/geolocate/client"
 )
 
-// New Places API endpoints that need to be queried for all Nearby Search
-var placesSearchAPI = &client.ApiConfig{
-	Host:  "https://places.googleapis.com",
-	FPath: "/v1/places",
-	Path:  "",
+// New Places API endpoints that need to be queried for all Place related Search
+type placesAPI struct {
+	Host     string
+	BasePath string
 }
+
+var places = placesAPI{Host: "https://places.googleapis.com", BasePath: "/v1/places"}
 
 // Converts PlacesHeader into a map to be used as HTTP header in POST request to Places API
 func (h *PlacesHeader) Headers() map[string]string {
 	header := map[string]string{}
 	prefix := ""
-	if h.MaskPrefix {
+	if h.FieldMaskPrefix {
 		prefix = "places." // Only for Places(plural) requests. For looking up a single place, we dont need this prefix. This api is wierd
 	}
-	fieldMaskHeader := FieldMaskHeader(h.PlaceFieldMasks, prefix)
-	header["X-Goog-Api-Key"] = h.ApiKey
+	fieldMaskHeader := FieldMaskHeader(h.FieldMasks, prefix, h.TokenMask)
+	header["X-Goog-Api-Key"] = os.Getenv("API_KEY")
 	header["X-Goog-FieldMask"] = strings.Join(fieldMaskHeader, ",")
-	header["Content-Type"] = h.ContentType
+	header["Content-Type"] = "application/json"
 	return header
 }
 
 // API Response to call to Places API
 type PlacesSearchResponse struct {
-	Places []Place `json:"places"`
+	Places        []Place `json:"places"`
+	NextPageToken string  `json:"nextPageToken"`
 }
 type LocalizedText struct {
 	Text         string `json:"text"`
@@ -48,7 +51,7 @@ type Place struct {
 	Types               []string       `json:"types"`
 	FormattedAddress    string         `json:"formattedAddress"`
 	Rating              int32          `json:"rating"`
-	Location            *LatLng        `json:"location"`
+	Location            Location       `json:"location"`
 	BusinessStatus      BusinessStatus `json:"businessStatus"`
 	PhoneNumber         string         `json:"nationalPhoneNumber"`
 	Photos              []Photo        `json:"photos,omitempty"`
@@ -58,7 +61,7 @@ type Place struct {
 
 type NearbySearchRequest struct {
 	RegionCode           string               `json:"regionCode,omitempty"`
-	IncludedTypes        []string             `json:"includedTypes,omitempty"`
+	IncludedTypes        []PlaceType          `json:"includedTypes,omitempty"`
 	ExcludedTypes        []string             `json:"excludedTypes,omitempty"`
 	IncludedPrimaryTypes []string             `json:"includedPrimaryTypes,omitempty"`
 	ExcludedPrimaryTypes []string             `json:"excludedPrimaryTypes,omitempty"`
@@ -71,7 +74,7 @@ type TextSearchRequest struct {
 	TextQuery                        string                  `json:"textQuery"`
 	IncludedType                     string                  `json:"includedType,omitempty"`
 	IncludePureServiceAreaBusinesses bool                    `json:"includePureServiceAreaBusinesses,omitempty"`
-	PageSize                         int                     `json:"pageSize,omitempty"`
+	PageSize                         int32                   `json:"pageSize,omitempty"`
 	PageToken                        string                  `json:"pageToken,omitempty"`
 	StrictTypeFiltering              bool                    `json:"strictTypeFiltering,omitempty"`
 	LocationBias                     *LocationRestriction    `json:"locationBias,omitempty"`
@@ -85,31 +88,32 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 	if r.LocationRestriction == nil {
 		return PlacesSearchResponse{}, errors.New("maps: Required fields LocationRestriction missing")
 	}
-	var response struct {
-		Places []Place `json:"places"`
+	var response PlacesSearchResponse
+	api := &client.ApiConfig{
+		Host: places.Host,
+		Path: places.BasePath + ":searchNearby",
 	}
-	placesSearchAPI.Path = placesSearchAPI.FPath + ":searchNearby"
-	if err := c.JsonPost(ctx, placesSearchAPI, r, h, &response); err != nil {
+	if err := c.JsonPost(ctx, api, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
-	return PlacesSearchResponse{response.Places}, nil
+	return response, nil
 }
 
 // TextSearch lets you search for places within a specified area that matches user text input. You can refine
 // your search request by supplying the text and location restictions you are searching for.
 func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
-	if r.TextQuery == "" {
-		return PlacesSearchResponse{}, errors.New("maps: Required fields Text Search is empty")
+	if r.TextQuery == "" && r.PageToken == "" {
+		return PlacesSearchResponse{}, errors.New("maps: Required fields Text Search and nextPage token are empty")
 	}
-	var response struct {
-		Places []Place `json:"places"`
+	var response PlacesSearchResponse
+	api := &client.ApiConfig{
+		Host: places.Host,
+		Path: places.BasePath + ":searchText",
 	}
-	placesSearchAPI.Path = placesSearchAPI.FPath + ":searchText"
-
-	if err := c.JsonPost(ctx, placesSearchAPI, r, h, &response); err != nil {
+	if err := c.JsonPost(ctx, api, r, h, &response); err != nil {
 		return PlacesSearchResponse{}, err
 	}
-	return PlacesSearchResponse{response.Places}, nil
+	return response, nil
 
 }
 
@@ -117,24 +121,70 @@ func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *Pla
 func (c *GeoClient) PlaceDetails(ctx context.Context, id string, h *PlacesHeader) (Place, error) {
 
 	var response Place
-	placesSearchAPI.Path = placesSearchAPI.FPath + "/" + id
-	if err := c.JsonGet(ctx, placesSearchAPI, nil, h, &response); err != nil {
+	api := &client.ApiConfig{
+		Host: places.Host,
+		Path: places.BasePath + "/" + id,
+	}
+	if err := c.JsonGet(ctx, api, nil, h, &response); err != nil {
 		return Place{}, err
 	}
 	return response, nil
 }
-
-type PlacesHeader struct {
-	ContentType     string
-	ApiKey          string
-	PlaceFieldMasks []PlaceFieldMask
-	MaskPrefix      bool
+func GetAllPlacesTypes() []PlaceType {
+	AllPlaceTypes := []PlaceType{
+		AcaiShop, AfghaniRestaurant, AfricanRestaurant, AmericanRestaurant,
+		AsianRestaurant, BagelShop, Bakery, Bar, BarAndGrill, BarbecueRestaurant,
+		BrazilianRestaurant, BreakfastRestaurant, BrunchRestaurant, BuffetRestaurant,
+		Cafe, Cafeteria, CandyStore, CatCafe, ChineseRestaurant, ChocolateFactory,
+		ChocolateShop, CoffeeShop, Confectionery, Deli, DessertRestaurant,
+		DessertShop, Diner, DogCafe, DonutShop, FastFoodRestaurant,
+		FineDiningRestaurant, FoodCourt, FrenchRestaurant, GreekRestaurant,
+		HamburgerRestaurant, IceCreamShop, IndianRestaurant, IndonesianRestaurant,
+		ItalianRestaurant, JapaneseRestaurant, JuiceShop, KoreanRestaurant,
+		LebaneseRestaurant, MealDelivery, MealTakeaway, MediterraneanRestaurant,
+		MexicanRestaurant, MiddleEasternRestaurant, PizzaRestaurant, Pub,
+		RamenRestaurant, Restaurant, SandwichShop, SeafoodRestaurant,
+		SpanishRestaurant, SteakHouse, SushiRestaurant, TeaHouse, ThaiRestaurant,
+		TurkishRestaurant, VeganRestaurant, VegetarianRestaurant,
+		VietnameseRestaurant, WineBar,
+	}
+	return AllPlaceTypes
+}
+func GetDefaultPlacesTypes() []PlaceType {
+	DefaultPlaces := []PlaceType{
+		AsianRestaurant, BagelShop, Bar, BarAndGrill, BarbecueRestaurant, BreakfastRestaurant, BrunchRestaurant, BuffetRestaurant,
+		Cafe, CatCafe, CoffeeShop, DessertRestaurant,
+		DessertShop, Diner, DogCafe, FastFoodRestaurant,
+		FineDiningRestaurant, IceCreamShop, IndianRestaurant, IndonesianRestaurant,
+		ItalianRestaurant, JapaneseRestaurant, JuiceShop, KoreanRestaurant,
+		LebaneseRestaurant, MediterraneanRestaurant,
+		MexicanRestaurant, MiddleEasternRestaurant, PizzaRestaurant, Pub,
+		RamenRestaurant, Restaurant, SeafoodRestaurant,
+		SpanishRestaurant, SteakHouse, SushiRestaurant, TeaHouse, ThaiRestaurant,
+		TurkishRestaurant, VeganRestaurant, VegetarianRestaurant,
+		VietnameseRestaurant, WineBar,
+	}
+	return DefaultPlaces
 }
 
-func FieldMaskHeader(placeFieldMasks []PlaceFieldMask, prefix string) []string {
+type PlacesHeader struct {
+	FieldMasks      []PlaceFieldMask
+	FieldMaskPrefix bool
+	TokenMask       string
+}
+type StaticHeader struct {
+	ContentType string
+	ApiKey      string
+	FieldMasks  []PlaceFieldMask
+}
+
+func FieldMaskHeader(placeFieldMasks []PlaceFieldMask, prefix string, tokenMask string) []string {
 	var fieldMask []string
-	for _, fields := range placeFieldMasks {
-		fieldMask = append(fieldMask, string(prefix+string(fields)))
+	for _, field := range placeFieldMasks {
+		fieldMask = append(fieldMask, string(prefix+string(field)))
+	}
+	if tokenMask != "" {
+		fieldMask = append(fieldMask, tokenMask)
 	}
 	return fieldMask
 }
@@ -143,15 +193,15 @@ type LocationRestriction struct {
 	Circle Circle `json:"circle"`
 }
 type Circle struct {
-	Center LatLng `json:"center"`
-	Radius int64  `json:"radius"`
+	Center Location `json:"center"`
+	Radius int64    `json:"radius"`
 }
 type RectangularRestriction struct {
 	Rectangle Rectangle `json:"rectangle"`
 }
 type Rectangle struct {
-	Low  LatLng `json:"low"`
-	High LatLng `json:"high"`
+	Low  Location `json:"low"`
+	High Location `json:"high"`
 }
 type RankPreference string
 
@@ -159,13 +209,6 @@ const (
 	RankPreferenceUnspecified = RankPreference("RANK_PREFERENCE_UNSPECIFIED")
 	RankPreferenceDistance    = RankPreference("DISTANCE")
 	RankPreferencePopularity  = RankPreference("POPULARITY")
-)
-
-type PlaceTypes string
-
-const (
-	IncludedTypesRestaurant = PlaceTypes("restaurant")
-	IncludedTypeBar         = PlaceTypes("bar")
 )
 
 type PlaceFieldMask string
@@ -183,3 +226,4 @@ const (
 	PlaceFieldMaskTypes                = PlaceFieldMask("types")
 	PlaceFieldMaskOpeningHours         = PlaceFieldMask("regularOpeningHours")
 )
+const MaskNextPageToken = "nextPageToken"
