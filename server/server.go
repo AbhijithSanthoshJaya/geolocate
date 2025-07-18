@@ -19,6 +19,17 @@ var resultCount = int32(10)
 
 var searchString = "in"
 
+// main.go or server.go
+var sharedClient *client.Client
+
+func init() {
+	var err error
+	sharedClient, err = client.NewClient(client.AddAPIKey(apiKey))
+	if err != nil {
+		fmt.Errorf("Failed to initialize client: %v", err)
+	}
+}
+
 // Look up  Geocoded Map input with lat,long and fetch a human readable address metadata
 
 func GetGeodecode(w http.ResponseWriter, r *http.Request) {
@@ -108,12 +119,7 @@ func GetPlacesNearby(w http.ResponseWriter, r *http.Request) {
 	}
 	location := geo.LocationRestriction{Circle: geo.Circle{Center: geo.Location{Latitude: params.Lat, Longitude: params.Long}, Radius: params.Radius}}
 	req := geo.NearbySearchRequest{LocationRestriction: &location, MaxResultCount: resultCount, IncludedTypes: incTypes}
-	c, err := client.NewClient(client.AddAPIKey(apiKey))
-	if err != nil {
-		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
-		return
-	}
-	apiClient := geo.GeoClient{c}
+	apiClient := geo.GeoClient{sharedClient}
 	ctx := context.Background()
 	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: true}
 	place, err := apiClient.NearbySearch(ctx, &req, &header) //TODO
@@ -140,18 +146,11 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 	}
 	textQuery := params.Text
 	if params.Locality != "" {
-		textQuery = textQuery + searchString + params.Locality
+		textQuery = textQuery + searchString + params.Locality // Locality could be city,province code which we will append to the search string
 	}
-	fmt.Println("Text Query", textQuery)
-
 	locationBias := geo.LocationRestriction{Circle: geo.Circle{Center: geo.Location{Latitude: params.Lat, Longitude: params.Long}, Radius: params.Radius}}
 	req := geo.TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
-	c, err := client.NewClient(client.AddAPIKey(apiKey))
-	if err != nil {
-		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
-		return
-	}
-	apiClient := geo.GeoClient{c}
+	apiClient := geo.GeoClient{sharedClient}
 	ctx := context.Background()
 	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: true, TokenMask: geo.MaskNextPageToken}
 	place, err := apiClient.TextSearch(ctx, &req, &header)
@@ -177,12 +176,7 @@ func GetPlacesFromTextBounded(w http.ResponseWriter, r *http.Request) {
 	textQuery := params.Text
 	locationRestriction := geo.RectangularRestriction{Rectangle: geo.Rectangle{Low: geo.Location{Latitude: params.Lat, Longitude: params.Long}, High: geo.Location{Latitude: params.Lat, Longitude: params.Long}}} // Need to set this making call to Geodecode with a City + State+Country string. Low and High must be mapped correctly. TODO
 	req := geo.TextSearchRequest{TextQuery: textQuery, LocationRestriction: &locationRestriction, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
-	c, err := client.NewClient(client.AddAPIKey(apiKey))
-	if err != nil {
-		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
-		return
-	}
-	apiClient := geo.GeoClient{c}
+	apiClient := geo.GeoClient{sharedClient}
 	ctx := context.Background()
 	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: true, TokenMask: geo.MaskNextPageToken}
 	place, err := apiClient.TextSearch(ctx, &req, &header) //TODO
@@ -201,12 +195,7 @@ func GetPlacebyId(w http.ResponseWriter, r *http.Request) {
 		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: "Please enter a valid placeId"})
 		return
 	}
-	c, err := client.NewClient(client.AddAPIKey(apiKey))
-	if err != nil {
-		responseJson(w, http.StatusServiceUnavailable, Response{Data: nil, Error: err.Error()})
-		return
-	}
-	apiClient := geo.GeoClient{c}
+	apiClient := geo.GeoClient{sharedClient}
 	ctx := context.Background()
 	header := geo.PlacesHeader{FieldMasks: defaultFieldMask, FieldMaskPrefix: false}
 	place, err := apiClient.PlaceDetails(ctx, placeID, &header)
