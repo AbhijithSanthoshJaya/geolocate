@@ -23,7 +23,7 @@ func Test_Geocode(t *testing.T) {
 	assert.NotNil(t, testclient)
 	testGeoClient := GeoClient{testclient}
 	ctx := context.Background()
-	req := GeocodingRequest{Address: "29 Beechwood Terr,Halifax, Canada"}
+	req := GeocodingRequest{Address: "Toronto, Ontario"}
 	resp, err := testGeoClient.Geocode(ctx, &req)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)

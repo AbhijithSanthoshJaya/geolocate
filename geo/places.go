@@ -3,6 +3,7 @@ package geo
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
 	"strings"
 
@@ -10,7 +11,16 @@ import (
 	_ "image/jpeg"
 
 	"github.com/geolocate/client"
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	// Load the geo/.env file
+	//fmt.Print("Loading api key")
+	if err := godotenv.Load("geo/.env"); err != nil {
+		log.Printf("warning: could not load geo/.env — %v", err)
+	}
+}
 
 // New Places API endpoints that need to be queried for all Place related Search
 type placesAPI struct {
@@ -57,6 +67,8 @@ type Place struct {
 	Photos              []Photo        `json:"photos,omitempty"`
 	Timezone            Timezone       `json:"timeZone,omitempty"`
 	RegularOpeningHours OpeningHours   `json:"regularOpeningHours,omitempty"`
+	Reviews             []Review       `json:"reviews,omitempty"`
+	Description         Text           `json:"editorialSummary,omitempty"`
 }
 
 type NearbySearchRequest struct {
@@ -100,7 +112,7 @@ func (c *GeoClient) NearbySearch(ctx context.Context, r *NearbySearchRequest, h 
 }
 
 // TextSearch lets you search for places within a specified area that matches user text input. You can refine
-// your search request by supplying the text and location restictions you are searching for.
+// your search request by supplying the text and location restrictions you are searching for.
 func (c *GeoClient) TextSearch(ctx context.Context, r *TextSearchRequest, h *PlacesHeader) (PlacesSearchResponse, error) {
 	if r.TextQuery == "" && r.PageToken == "" {
 		return PlacesSearchResponse{}, errors.New("maps: Required fields Text Search and nextPage token are empty")
@@ -225,5 +237,8 @@ const (
 	PlaceFieldMaskRatings              = PlaceFieldMask("rating")
 	PlaceFieldMaskTypes                = PlaceFieldMask("types")
 	PlaceFieldMaskOpeningHours         = PlaceFieldMask("regularOpeningHours")
+	PlaceReviews                       = PlaceFieldMask("reviews")
+	PlaceDescription                   = PlaceFieldMask("editorialSummary")
+	PlaceLiveMusic                     = PlaceFieldMask("liveMusic")
 )
 const MaskNextPageToken = "nextPageToken"

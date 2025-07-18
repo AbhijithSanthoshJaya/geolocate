@@ -141,3 +141,15 @@ const (
 	WineBar                 PlaceType = "wine_bar"
 	Club                    PlaceType = "night_club"
 )
+
+// Review represents a single entry in the "reviews" field of a Place Details response.
+type Review struct {
+	Rating   int    `json:"rating"`
+	Text     Text   `json:"text"`
+	Time     int64  `json:"time"`               // Unix timestamp
+	Language string `json:"language,omitempty"` // Optional
+}
+type Text struct {
+	Text     string `json:"text"`
+	Language string `json:"languageCode"`
+}

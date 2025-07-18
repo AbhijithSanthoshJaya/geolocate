@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,8 +14,9 @@ import (
 )
 
 var apiKey = os.Getenv("API_KEY")
-var defaultFieldMask = []geo.PlaceFieldMask{geo.PlaceFieldMaskBusinessStatus, geo.PlaceFieldMaskFormattedAddress, geo.PlaceFieldMaskDispName, geo.PlaceFieldMaskPlaceID, geo.PlaceFieldMaskTypes, geo.PlaceFieldMaskOpeningHours}
+var defaultFieldMask = []geo.PlaceFieldMask{geo.PlaceFieldMaskBusinessStatus, geo.PlaceFieldMaskFormattedAddress, geo.PlaceFieldMaskDispName, geo.PlaceFieldMaskPlaceID, geo.PlaceFieldMaskTypes, geo.PlaceFieldMaskOpeningHours, geo.PlaceReviews, geo.PlaceDescription}
 var resultCount = int32(10)
+
 var searchString = "in"
 
 // Look up  Geocoded Map input with lat,long and fetch a human readable address metadata
@@ -83,8 +85,8 @@ type PlacesFromText struct {
 	Lat       float64 `json:"latitude"`
 	Long      float64 `json:"longitude"`
 	Radius    int64   `json:"radius"`
-	Text      string  `json:"text,omitempty"`
-	Locality  string  `json:"locality"`            // We need to get this in front end from user's lat,long and send it in their text search request. Eg: locality="Boston MA, USA". We append this to the Text( eg Skating Ring). So we limit the search to the city
+	Text      string  `json:"text"`
+	Locality  string  `json:"locality,omitempty"`  // We need to get this in front end from user's lat,long and send it in their text search request. Eg: locality="Boston MA, USA". We append this to the Text( eg Skating Ring). So we limit the search to the city
 	PageToken string  `json:"pageToken,omitempty"` // Paginated results
 }
 
@@ -124,7 +126,9 @@ func GetPlacesNearby(w http.ResponseWriter, r *http.Request) {
 
 // Find Places from Text. Locality represents user's current city,province,country as string
 func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
+
 	var params PlacesFromText
+
 	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
 		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: err.Error()})
@@ -134,7 +138,12 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 		responseJson(w, http.StatusBadRequest, Response{Data: nil, Error: "Please enter a valid search text"})
 		return
 	}
-	textQuery := params.Text + searchString + params.Locality
+	textQuery := params.Text
+	if params.Locality != "" {
+		textQuery = textQuery + searchString + params.Locality
+	}
+	fmt.Println("Text Query", textQuery)
+
 	locationBias := geo.LocationRestriction{Circle: geo.Circle{Center: geo.Location{Latitude: params.Lat, Longitude: params.Long}, Radius: params.Radius}}
 	req := geo.TextSearchRequest{TextQuery: textQuery, LocationBias: &locationBias, RankPreference: geo.RankPreferenceDistance, PageSize: resultCount, PageToken: params.PageToken}
 	c, err := client.NewClient(client.AddAPIKey(apiKey))
@@ -154,7 +163,7 @@ func GetPlacesFromText(w http.ResponseWriter, r *http.Request) {
 }
 
 // Find places using search text within a given region using locationRestriction that match user preferences. WIP
-func GetPlacesBoundedText(w http.ResponseWriter, r *http.Request) {
+func GetPlacesFromTextBounded(w http.ResponseWriter, r *http.Request) {
 	var params PlacesFromText
 	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {

@@ -160,7 +160,7 @@ func (c *Client) post(ctx context.Context, config *ApiConfig, apiReq interface{}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	fmt.Printf("Post Request: %+v", req)
+	//fmt.Printf("Post Request: %+v", req)
 	return c.do(ctx, req)
 }
 
@@ -219,7 +219,7 @@ func (r *RetryRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 		if err == nil && r.ShouldRetry(resp, err) {
 			// If the response should be retried, wait and retry
 			time.Sleep(r.RetryDelay)
-			fmt.Printf("Retry attempt: %d\n", i)
+			//fmt.Printf("Retry attempt: %d\n", i)
 			continue
 		}
 		break
